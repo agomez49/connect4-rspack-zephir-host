@@ -1,31 +1,134 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import "./App.css";
+import React, { useState, Suspense } from 'react';
+import clsx from 'clsx';
+import RemoteToast from './components/RemoteToast';
 
-function App() {
-	const [count, setCount] = useState(0);
+const WinnerMessage = React.lazy(() => import('./components/WinnerMessage'));
 
-	return (
-		<div className="App">
-			<div>
-				<a href="https://reactjs.org" target="_blank" rel="noreferrer">
-					<img src={reactLogo} className="logo react" alt="React logo" />
-				</a>
-			</div>
-			<h1>Rspack + React + TypeScript</h1>
-			<div className="card">
-				<button type="button" onClick={() => setCount(count => count + 1)}>
-					count is {count}
-				</button>
-				<p>
-					Edit <code>src/App.tsx</code> and save to test HMR
-				</p>
-			</div>
-			<p className="read-the-docs">
-				Click on the Rspack and React logos to learn more
-			</p>
-		</div>
-	);
-}
+const ROWS = 6;
+const COLS = 7;
+type Player = 'R' | 'Y' | null;
+
+const App: React.FC = () => {
+  const [board, setBoard] = useState<Player[][]>(
+    Array.from({ length: ROWS }, () => Array(COLS).fill(null))
+  );
+  const [currentPlayer, setCurrentPlayer] = useState<Player>('R');
+  const [winner, setWinner] = useState<Player>(null);
+  const [showToast, setShowToast] = useState(false);
+
+  const handleClick = (col: number) => {
+    if (winner) return;
+
+    const newBoard = board.map(row => [...row]);
+    for (let row = ROWS - 1; row >= 0; row--) {
+      if (!newBoard[row][col]) {
+        newBoard[row][col] = currentPlayer;
+        setBoard(newBoard);
+        if (checkWinner(newBoard, row, col, currentPlayer)) {
+          setWinner(currentPlayer);
+          setShowToast(true);
+        } else {
+          setCurrentPlayer(currentPlayer === 'R' ? 'Y' : 'R');
+        }
+        break;
+      }
+    }
+  };
+
+  const checkWinner = (
+    board: Player[][],
+    row: number,
+    col: number,
+    player: Player
+  ): boolean => {
+    const directions = [
+      [0, 1], [1, 0], [1, 1], [1, -1],
+    ];
+    for (const [dx, dy] of directions) {
+      let count = 1;
+      for (const dir of [-1, 1]) {
+        let r = row + dx * dir;
+        let c = col + dy * dir;
+        while (
+          r >= 0 && r < ROWS &&
+          c >= 0 && c < COLS &&
+          board[r][c] === player
+        ) {
+          count++;
+          r += dx * dir;
+          c += dy * dir;
+        }
+      }
+      if (count >= 4) return true;
+    }
+    return false;
+  };
+
+  const reset = () => {
+    setBoard(Array.from({ length: ROWS }, () => Array(COLS).fill(null)));
+    setCurrentPlayer('R');
+    setWinner(null);
+    setShowToast(false);
+  };
+
+  return (
+    <>
+      <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-6 gap-8">
+        {showToast && winner && (
+          <RemoteToast
+            message={`🎉 Player ${winner === 'R' ? 'Red' : 'Yellow'} Wins! (This is a Remote Component)`}
+            type="success"
+            duration={15000}
+            onClose={() => setShowToast(false)}
+          />
+        )}
+        <div className="space-y-6">
+          <h1 className="text-4xl font-bold text-center">Connect 4</h1>
+          <div className="flex flex-col gap-1 bg-blue-700 p-2 rounded-lg shadow-lg">
+            {board.map((row, rowIndex) => (
+              <div key={rowIndex} className="flex gap-1">
+                {row.map((cell, colIndex) => (
+                  <div
+                    key={colIndex}
+                    onClick={() => handleClick(colIndex)}
+                    className={clsx(
+                      'w-14 h-14 rounded-full flex items-center justify-center cursor-pointer transition-all',
+                      {
+                        'bg-red-500': cell === 'R',
+                        'bg-yellow-500': cell === 'Y',
+                        'bg-white hover:bg-blue-300': !cell && !winner,
+                        'bg-white': !cell && winner,
+                      }
+                    )}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+
+          <div className="text-center space-y-2">
+            {winner ? (
+              <Suspense fallback={<div>Loading...</div>}>
+                <WinnerMessage winner={winner} onReset={reset} />
+              </Suspense>
+            ) : (
+              <p className="text-xl">
+                Turn:{' '}
+                <span
+                  className={clsx('font-bold', {
+                    'text-red-300': currentPlayer === 'R',
+                    'text-yellow-300': currentPlayer === 'Y',
+                  })}
+                >
+                  {currentPlayer === 'R' ? 'Red' : 'Yellow'}
+                </span>
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
 
 export default App;

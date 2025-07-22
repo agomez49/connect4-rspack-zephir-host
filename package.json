@@ -1,5 +1,6 @@
 {
   "name": "rspack-project",
+  "author": "Alejandro Gomez",
   "private": true,
   "version": "1.0.0",
   "scripts": {
@@ -7,7 +8,14 @@
     "build": "rspack build",
     "preview": "rspack preview"
   },
+  "sideEffects": true,
+  "zephyr": {
+    "dependencies": {
+      "rspack-remote": "https://alejandro-g-mez-80-rspack-remote-rspack-remote-ag-33460c19d-ze.zephyrcloud.app"
+    }
+  },
   "dependencies": {
+    "clsx": "^2.1.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "zephyr-webpack-plugin": "^0.0.56"
@@ -18,7 +26,14 @@
     "@rspack/plugin-react-refresh": "^1.4.3",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "autoprefixer": "^10.4.21",
+    "css-loader": "^7.1.2",
+    "dotenv": "^17.2.0",
+    "postcss": "^8.5.6",
+    "postcss-loader": "^8.1.1",
     "react-refresh": "^0.17.0",
+    "style-loader": "^4.0.0",
+    "tailwindcss": "^3.4.17",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
   }
