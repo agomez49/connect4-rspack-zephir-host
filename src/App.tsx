@@ -1,8 +1,9 @@
 import React, { useState, Suspense } from 'react';
 import clsx from 'clsx';
-import RemoteToast from './components/RemoteToast';
 
+// Lazy load components that are not immediately needed
 const WinnerMessage = React.lazy(() => import('./components/WinnerMessage'));
+const RemoteToast = React.lazy(() => import('./components/remote/RemoteToast'));
 
 const ROWS = 6;
 const COLS = 7;
@@ -75,12 +76,14 @@ const App: React.FC = () => {
     <>
       <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-6 gap-8">
         {showToast && winner && (
-          <RemoteToast
-            message={`🎉 Player ${winner === 'R' ? 'Red' : 'Yellow'} Wins! (This is a Remote Component)`}
-            type="success"
-            duration={15000}
-            onClose={() => setShowToast(false)}
-          />
+          <Suspense fallback={<div className="fixed top-4 right-4 z-50 bg-gray-100 text-gray-800 p-2 rounded-lg shadow-md">Loading toast...</div>}>
+            <RemoteToast
+              message={`🎉 Player ${winner === 'R' ? 'Red' : 'Yellow'} Wins! (This is a Remote Component)`}
+              type="success"
+              duration={15000}
+              onClose={() => setShowToast(false)}
+            />
+          </Suspense>
         )}
         <div className="space-y-6">
           <h1 className="text-4xl font-bold text-center">Connect 4</h1>

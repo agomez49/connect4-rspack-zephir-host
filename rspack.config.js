@@ -1,10 +1,12 @@
 const rspack = require('@rspack/core')
 const refreshPlugin = require('@rspack/plugin-react-refresh')
 const { withZephyr } = require('zephyr-webpack-plugin')
+const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer')
 const path = require('path')
 require('dotenv').config()
 
 const isDev = process.env.NODE_ENV === 'development'
+const shouldAnalyze = process.env.ANALYZE === 'true'
 
 function printCompilationMessage(status, port) {
 	if (status === 'compiling') {
@@ -101,26 +103,23 @@ module.exports = withZephyr()({
 			name: 'rspack-project',
 			filename: 'remoteEntry.js',
 			remotes: {
-				remoteToast: `remoteToast@${process.env.REMOTE_TOAST_URL}`,
+				remoteToast: `remoteToast@${process.env.REMOTE_TOAST_URL}/remoteEntry.js`,
 			},
 			shared: {
 				react: { 
-					eager: true, 
+					eager: true,
 					singleton: true,
 					requiredVersion: '^19.1.0',
-					strictVersion: true,
 				},
 				'react-dom': { 
-					eager: true, 
+					eager: true,
 					singleton: true,
 					requiredVersion: '^19.1.0',
-					strictVersion: true,
 				},
 				'react-dom/client': {
 					eager: true,
 					singleton: true,
 					requiredVersion: '^19.1.0',
-					strictVersion: true,
 				}
 			},
 		}),
@@ -133,5 +132,68 @@ module.exports = withZephyr()({
 			template: './index.html',
 		}),
 		isDev ? new refreshPlugin() : null,
+		shouldAnalyze ? new BundleAnalyzerPlugin({
+			analyzerMode: 'static',
+			openAnalyzer: false,
+			reportFilename: 'bundle-analyzer-report.html'
+		}) : null,
 	].filter(Boolean),
+	
+	// Bundle optimization
+	optimization: {
+		splitChunks: {
+			chunks: 'all',
+			minSize: 20000,
+			maxSize: 200000,
+			cacheGroups: {
+				// Separate vendor chunk for node_modules
+				vendor: {
+					test: /[\\/]node_modules[\\/]/,
+					name: 'vendors',
+					chunks: 'all',
+					priority: 10,
+					enforce: true,
+				},
+				// React and React-DOM in separate chunk (shared with Module Federation)
+				react: {
+					test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
+					name: 'react-vendor',
+					chunks: 'all',
+					priority: 20,
+					enforce: true,
+				},
+				// Tailwind CSS in separate chunk
+				styles: {
+					name: 'styles',
+					test: /\.css$/,
+					chunks: 'all',
+					priority: 15,
+					enforce: true,
+				},
+				// Common components chunk
+				common: {
+					name: 'common',
+					minChunks: 2,
+					chunks: 'all',
+					priority: 5,
+					reuseExistingChunk: true,
+				},
+			},
+		},
+		// Minimize in production
+		minimize: !isDev,
+		// Remove unused exports (tree shaking)
+		usedExports: true,
+		// Enable module concatenation (scope hoisting)
+		concatenateModules: true,
+		// Remove dead code
+		sideEffects: false,
+	},
+	
+	// Performance optimization
+	performance: {
+		hints: isDev ? false : 'warning',
+		maxEntrypointSize: 400000, // 400KB - adjusted for Module Federation
+		maxAssetSize: 200000, // 200KB per individual asset
+	},
 })
